@@ -61,7 +61,7 @@ public:
         chrono::system_clock::time_point now = chrono::system_clock::now();
         time_t currentTime = chrono::system_clock::to_time_t(now);
 
-        ofstream file("weight_data.txt", ios::app);
+        ofstream file("weight.txt", ios::app);
         if (file.is_open())
         {
             file << "Weight on " << ctime(&currentTime) << ": " << weight << " kg\n";
@@ -75,7 +75,7 @@ public:
 
     void viewPreviousWeight()
     {
-        ifstream file("weight_data.txt");
+        ifstream file("weight.txt");
         if (file.is_open())
         {
             string line;
@@ -173,7 +173,7 @@ public:
         chrono::system_clock::time_point now = chrono::system_clock::now();
         time_t currentTime = chrono::system_clock::to_time_t(now);
 
-        ofstream file("finance_data.txt", ios::app);
+        ofstream file("finance.txt", ios::app);
         if (file.is_open())
         {
             file << "Income from " << incomeSource << " on " << ctime(&currentTime) << "amount : +" << income << "\n";
@@ -206,10 +206,10 @@ public:
 
         balance -= expense;
 
-        std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-        std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
+        chrono::system_clock::time_point now = std::chrono::system_clock::now();
+        time_t currentTime = std::chrono::system_clock::to_time_t(now);
 
-        ofstream file("finance_data.txt", ios::app);
+        ofstream file("finance.txt", ios::app);
         if (file.is_open())
         {
             file << "Expense of " << expenseTopic << " on " << ctime(&currentTime) << " amount : -" << expense << "\n";
@@ -226,7 +226,7 @@ public:
         cout << Green << Bold << "Current Balance: tk" << balance << "\n"
              << Reset;
 
-        ifstream file("finance_data.txt");
+        ifstream file("finance.txt");
         if (file.is_open())
         {
             string line;
@@ -248,7 +248,7 @@ public:
         double balance = 0.0;
         int choice;
 
-        ifstream file("finance_data.txt");
+        ifstream file("finance.txt");
         if (file.is_open())
         {
             string line;
@@ -323,6 +323,8 @@ private:
     };
 
     deque<taskStore> task;
+    map<string, pair<int, int> > topicTime;
+    map<string, int> historySet;
     static bool compare(taskStore &node1, taskStore &node2)
     {
         if (node1.key < node2.key)
@@ -361,36 +363,37 @@ private:
             return y + m + d;
         return (d + "/" + m + "/" + y);
     }
-    void addToHistory(string task)
+    pair<int, int> secondToTime(int sec)
     {
-        time_t now = time(0);
-        tm *time = localtime(&now);
-        string key = dateToString(0);
 
-        ofstream myFile("history.txt", ios::app);
-        if (myFile.is_open())
+        int hour = sec / 3600;
+        int remSec = sec % 3600;
+        int minutes = remSec / 60;
+        if (sec < 0)
         {
-            myFile << key << " ";
-            myFile << task << " [";
-            myFile << "Updated time: " << time->tm_hour << ":" << time->tm_min << ":" << time->tm_sec << "]\n";
-            myFile.close();
+            pair<int, int> par;
+            par.first = 0;
+            par.second = 0;
+            return par;
         }
-        else
-        {
-            cout << "can not write\n";
-        }
+        pair<int, int> par;
+        par.first = hour;
+        par.second = minutes;
+        return par;
     }
-
-    void addToHistory(taskStore node)
+    pair<int, int> sumOfTime(pair<int, int> time1, pair<int, int> time2)
     {
-        string all;
-        all += "Started at: " + to_string(node.startHr) + ":" + to_string(node.startMn) + " ";
-        all += "End: " + to_string(node.endHr) + ":" + to_string(node.endMn) + " ";
-        all += "Task: " + node.taskName[0];
-        addToHistory(all);
+        pair<int, int> res;
+        res.first = (time1.first + time2.first);
+        if (time1.second + time2.second >= 60)
+        {
+            int hour = (time1.second + time2.second) / 60;
+            res.first += hour;
+        }
+        int minutes = (time1.second + time2.second) % 60;
+        res.second = minutes;
+        return res;
     }
-
-    // Other functions remain the same...
 
 public:
     vector<string> topic;
@@ -465,7 +468,7 @@ public:
         if (topicNo != 0)
         {
             cout << "Topic " << topicNo << " : " << topic[topicNo - 1] << "\n";
-            printFromTopicNo(topicNo + 1);
+            printFromTopicNo(topicNo);
         }
         else
         {
@@ -478,27 +481,6 @@ public:
             }
         }
         cout << Reset;
-    }
-
-    void printAllFromFile()
-    {
-        ifstream readFile("history.txt");
-        if (readFile.is_open())
-        {
-            cout << "History: \n";
-            cout << "----------------------------------------------------\n";
-            string line;
-            while (getline(readFile, line))
-            {
-                cout << line << endl;
-            }
-            readFile.close();
-            cout << "----------------------------------------------------\n";
-        }
-        else
-        {
-            cout << "Error reading from file!" << endl;
-        }
     }
 
     void writingNote()
@@ -516,7 +498,7 @@ public:
             try
             {
                 cout << "---------------------------------------------------\n";
-                ifstream rFile("note.txt");
+                ifstream rFile("note1.txt");
                 if (rFile.is_open())
                 {
                     string line;
@@ -540,7 +522,7 @@ public:
         case 2:
             try
             {
-                ofstream noteFile("note.txt", ios::app);
+                ofstream noteFile("note1.txt", ios::app);
                 if (noteFile.is_open())
                 {
                     cout << "Type your note here,(after finish enter 0 ) :\n";
@@ -549,7 +531,7 @@ public:
                     do
                     {
                         getline(cin, s);
-                        if (s[0] != 0 || s.size() != 1)
+                        if (s[0] != 0 && s.size() != 1)
                             noteFile << s << "\n";
                     } while ((s.size() != 1 && s[0] != '0'));
                     noteFile.close();
@@ -563,13 +545,12 @@ public:
         case 3:
             if (1)
             {
-                ofstream myFile("note.txt");
+                ofstream myFile("note1.txt");
                 if (myFile.is_open())
                 {
                     myFile.clear();
                     cout << "cleared successfully!\n";
                     myFile.close();
-                    addToHistory("Note cleared.");
                 }
                 else
                 {
@@ -667,6 +648,10 @@ public:
         if (topicNo <= topic.size() && topicNo != 0)
         {
             task[size - 1].taskName[0] = topic[topicNo - 1];
+            int time1 = task[size - 1].startHr * 3600 + task[size - 1].startMn * 60;
+            int time2 = task[size - 1].endHr * 3600 + task[size - 1].endMn * 60;
+            pair<int, int> time = secondToTime(time2 - time1);
+            topicTime[topic[topicNo - 1]] = sumOfTime(time, topicTime[topic[topicNo - 1]]);
         }
         else
         {
@@ -677,8 +662,6 @@ public:
         getline(cin, task[size - 1].taskName[1]);
         task[size - 1].taskName[2] = "Not Done yet";
         cout << "Task is successfully added.\n";
-        addToHistory(task[size - 1]); //--Adding file as history
-        addToHistory("Task Inputed.");
         sort(task.begin(), task.end(), compare);
     }
     void taskMarkAsDone(int deleteMark)
@@ -774,6 +757,87 @@ public:
         task.erase(task.begin() + taskNo - 1);
         cout << "Task " << taskNo << " is deleted\n";
     }
+    // Histoty related
+    void summaryToday()
+    {
+        map<string, pair<int, int> >::iterator it;
+        cout << Bold << "Topic name : Hour"
+             << "\n";
+        int index = 1;
+        for (it = topicTime.begin(); it != topicTime.end(); it++)
+        {
+            cout << index++ << " | " << it->first << " : " << it->second.first << " Hour " << it->second.second << " Minutes\n";
+        }
+    }
+    void addSummaryToHistory()
+    {
+        time_t now = time(0);
+        tm *time = localtime(&now);
+        string key = dateToString(0);
+        if (historySet[key] == 1)
+        {
+            cout << "Already set to file\n";
+            return;
+        }
+        historySet[key] = 1;
+        ofstream myFile("summary.txt", ios::app);
+        if (myFile.is_open())
+        {
+            myFile << "***\nDate: " << key << "\n";
+            myFile << "Topic name : Hour\n";
+            int index = 1;
+            map<string, pair<int, int> >::iterator it;
+            for (it = topicTime.begin(); it != topicTime.end(); it++)
+            {
+                myFile << index++ << " | " << it->first << " : " << it->second.first << " Hour " << it->second.second << " Minutes\n";
+            }
+            myFile.close();
+        }
+        else
+        {
+            cout << "can not write\n";
+        }
+    }
+    void showSummary()
+    {
+        ifstream readFile("summary.txt");
+        if (readFile.is_open())
+        {
+            cout << "History: \n";
+            cout << "----------------------------------------------------\n";
+            string line;
+            while (getline(readFile, line))
+            {
+                cout << line << endl;
+            }
+            readFile.close();
+            cout << "----------------------------------------------------\n";
+        }
+        else
+        {
+            cout << "Error reading from file!" << endl;
+        }
+    }
+
+    void clearSummary()
+    {
+        if (1)
+        {
+            ofstream myFile("summary.txt");
+            if (myFile.is_open())
+            {
+                cout << "History cleared.\n";
+                myFile.clear();
+                myFile.close();
+            }
+            else
+            {
+                cout << "file not open\n";
+            }
+        }
+    }
+
+    //
 
     void currentAndUpcoming(int &currHave)
     {
@@ -785,6 +849,8 @@ public:
         int hour = local_time->tm_hour;
         int minute = local_time->tm_min;
         // int second = local_time->tm_sec;
+        if (hour == 23 && minute == 59 && historySet[dateToString(0)] == 0)
+            addSummaryToHistory();
         bool flag = true;
         cout << Bold;
         cout << "*----------------------------------------------------------------------------------*\n";
@@ -940,8 +1006,8 @@ public:
             cout << "Enter 10 for delete all task.\n";
             cout << "Enter 11 for Adding Topic.\n";
             cout << "Enter 12 for Print task by Topic.\n";
-            cout << "Enter 13 for Showing Activity Log.\n";
-            cout << "Enter 14 for clear Activity log.\n";
+            cout << "Enter 13 for Todays summary\n";
+            cout << "Enter 14 for show,set or clear History(Summary)\n";
             cout << "Enter 0 for Refresh:\n"
                  << Reset;
             int command = 0;
@@ -999,7 +1065,6 @@ public:
 
             case 10:
                 task.clear();
-                addToHistory("All task cleared.");
                 break;
 
             case 11:
@@ -1009,27 +1074,25 @@ public:
                 printByTopic();
                 break;
             case 13:
-                printAllFromFile();
+                summaryToday();
                 break;
-
             case 14:
-                if (1)
+                cout << "Enter 1 for Show previous history\nEnter 2 for set history\nEnter 3 for clear History\n";
+                int comd;
+                cin >> comd;
+                if (comd == 1)
                 {
-                    ofstream myFile("history.txt");
-                    if (myFile.is_open())
-                    {
-                        cout << "History cleared.\n";
-                        myFile.clear();
-                        myFile.close();
-                        addToHistory("History Cleared.");
-                    }
-                    else
-                    {
-                        cout << "file not open\n";
-                    }
+                    showSummary();
+                }
+                else if (comd == 2)
+                {
+                    addSummaryToHistory();
+                }
+                else if (comd == 3)
+                {
+                    clearSummary();
                 }
                 break;
-
             case 0:
                 break;
             default:
@@ -1052,7 +1115,7 @@ public:
         } while (go);
     }
 };
-
+// 3 file : note1.txt,finance.txt,weight.txt,summary.txt
 int main()
 {
     ToDoList toDoList;
